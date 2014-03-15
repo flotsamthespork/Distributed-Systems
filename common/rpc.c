@@ -1,10 +1,10 @@
 
-#include "server_factory.h"
+#include "socket.h"
 
 #include "rpc.h"
 
 
-static struct server_socket rpc_server;
+static struct socket rpc_server;
 
 int rpcInit()
 {

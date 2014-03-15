@@ -10,18 +10,20 @@
 #include <stdlib.h>
 #include <vector>
 
-#include "server_factory.h"
+#include "socket.h"
 
 void
-server_socket_init(struct server_socket *s)
+socket_init(struct socket *s,
+		char *hostname,
+		int port)
 {
 	s->socket = -1;
-	s->hostname = 0;
-	s->port = -1;
+	s->hostname = hostname;
+	s->port = port;
 }
 
 void
-server_socket_destroy(struct server_socket *s)
+socket_destroy(struct socket *s)
 {
 	// TODO - unbind the socket 
 	if (s->hostname)
@@ -29,7 +31,7 @@ server_socket_destroy(struct server_socket *s)
 }
 
 static bool
-fill_server_info(struct server_socket *s)
+fill_server_info(struct socket *s)
 {
 	int status;
 #define HOSTNAME_LEN 512
@@ -58,7 +60,7 @@ fill_server_info(struct server_socket *s)
 }
 
 bool
-bind_server_socket(struct server_socket *s)
+bind_server_socket(struct socket *s)
 {
 	int conn_socket;
 	int status;
@@ -66,8 +68,8 @@ bind_server_socket(struct server_socket *s)
 	struct addrinfo *info;
 	struct addrinfo *info_itr;
 
-	server_socket_destroy(s);
-	server_socket_init(s);
+	socket_destroy(s);
+	socket_init(s);
 
 
 	memset(&hints, 0, sizeof(hints));
@@ -122,7 +124,7 @@ bind_server_socket(struct server_socket *s)
 
 	if (!fill_server_info(s))
 	{
-		server_socket_destroy(s);
+		socket_destroy(s);
 		return false;
 	}
 
