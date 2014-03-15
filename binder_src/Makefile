@@ -1,3 +1,3 @@
-MAIN = stringServer
+MAIN = binder
 
 include ../generic.mk

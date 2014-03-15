@@ -9,25 +9,40 @@
 #include <cctype>
 #include <stdlib.h>
 #include <vector>
+#include <cstdlib>
 
 #include "socket.h"
 
 void
 socket_init(struct socket *s,
 		char *hostname,
-		int port)
+		char *port)
 {
 	s->socket = -1;
-	s->hostname = hostname;
-	s->port = port;
+	s->hostname[0] = '\0';
+	s->port[0] = '\0';
+	if (hostname)
+		strcpy(s->hostname, hostname);
+
+	if (port)
+		strcpy(s->port, port);
 }
 
 void
 socket_destroy(struct socket *s)
 {
-	// TODO - unbind the socket 
-	if (s->hostname)
-		free(s->hostname);
+	if (s->socket != -1) {
+		close(s->socket);
+	}
+	s->hostname[0] = '\0';
+	s->port[0] = '\0';
+	s->socket = -1;
+}
+
+bool
+socket_isvalid(struct socket *s)
+{
+	return s->socket != -1;
 }
 
 static bool
@@ -52,9 +67,8 @@ fill_server_info(struct socket *s)
 		printf("Error(gethostname)\n");
 		return false;
 	}
-
-	s->hostname = (char*) malloc(sizeof(char)*(strlen(hostname)));
-	s->port = ntohs(addr.sin_port);
+	strcpy(s->hostname, hostname);
+	sprintf(s->port, "%d", ntohs(addr.sin_port));
 
 	return true;
 }
@@ -128,5 +142,48 @@ bind_server_socket(struct socket *s)
 		return false;
 	}
 
+	return true;
+}
+
+
+bool connect_socket(struct socket *s)
+{
+	addrinfo hints;
+	addrinfo *sa;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+
+	if (getaddrinfo(s->hostname, s->port, &hints, &sa) != 0) {
+//		std::cerr << "Could not get host information" << std::endl;
+		fprintf(stderr, "Could not get host information\n");
+	    return false;
+	}
+
+	addrinfo *p;
+	int sock;
+
+	for (p = sa; p != NULL; p = p->ai_next) {
+		sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (sock == -1) {
+//			std::cerr << "Could not create socket" << std::endl;
+			fprintf(stderr, "Could not create socket\n");
+		} else {
+			if (connect(sock, p->ai_addr, p->ai_addrlen) == -1) {
+				close(sock);
+//				std::cerr << "Failed to connect to socket" << std::endl;
+				fprintf(stderr, "Failed to connect to socket\n");
+			} else {
+				break;
+			}
+		}
+	}
+
+	if (p == NULL)
+		return false;
+
+	s->socket = sock;
 	return true;
 }

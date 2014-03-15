@@ -2,11 +2,13 @@ SHELL := /bin/bash
 
 all:
 	(cd common && make)
-	(cd server && make && cp stringServer ../)
-	(cd client && make && cp stringClient ../)
+	(cd binder_src && make && cp binder ../)
+	(cd server_src && make && cp server ../)
+	(cd client_src && make && cp client ../)
 
 clean:
 	(cd common && make clean)
-	(cd server && make clean)
-	(cd client && make clean)
-	rm stringClient stringServer
+	(cd server_src && make clean)
+	(cd client_src && make clean)
+	(cd binder_src && make clean)
+	rm client server binder

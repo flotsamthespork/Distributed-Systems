@@ -1,3 +1,3 @@
-MAIN = stringClient
+MAIN = client
 
 include ../generic.mk

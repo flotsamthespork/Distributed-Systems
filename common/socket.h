@@ -3,15 +3,18 @@
 
 struct socket {
 	int socket;
-	char *hostname;
-	int port;
+	char hostname[512];
+	char port[10];
 };
 
 void socket_init(struct socket *s,
 		char *hostname = 0,
-		int port = -1);
+		char *port = 0);
 void socket_destroy(struct socket *s);
+bool socket_isvalid(struct socket *s);
 
 bool bind_server_socket(struct socket *s);
+
+bool connect_socket(struct socket *s);
 
 #endif
