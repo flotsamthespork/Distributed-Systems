@@ -74,7 +74,7 @@ fill_server_info(struct socket *s)
 }
 
 bool
-bind_server_socket(struct socket *s)
+bind_server_socket(struct socket *s, char* port)
 {
 	int conn_socket;
 	int status;
@@ -90,7 +90,7 @@ bind_server_socket(struct socket *s)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	status = getaddrinfo(0, "0", &hints, &info);
+	status = getaddrinfo(0, port, &hints, &info);
 	if (status != 0)
 	{
 		printf("Error(getaddrinfo):\n");
@@ -185,7 +185,7 @@ bool connect_socket(struct socket *s)
 }
 
 int
-listen_socket(struct socket *s, int(*handler)(int))
+listen_socket(struct socket *s, bool(*handler)(int))
 {
 	fd_set master;
 	fd_set read_fds;
@@ -221,21 +221,12 @@ listen_socket(struct socket *s, int(*handler)(int))
 						fprintf(stdout, "Connection accepted!\n"); //TODO: DELETE THIS
 					}
 				} else {
-					(*handler)(i);
-
-					/*// receive data from client
-					std::string text;
-					bool success = receiveText(i, text);
-					if (success) {
-						std::cout << text << std::endl;
-						toTitleCase(text);
-						success = sendText(i, text);
-					}
+					bool success = (*handler)(i);
 
 					if (!success) {
 						close(i);
 						FD_CLR(i, &master);
-					}*/
+					}
 				}
 			}
 		}

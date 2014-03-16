@@ -1,13 +1,15 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 #include "socket.h"
 #include "message.h"
 #include "constants.h"
+#include "db.h"
 
 #include "rpc.h"
 
-
+static Database<skeleton> m_db;
 static struct socket rpc_server;
 static struct socket rpc_client;
 static bool rpc_client_is_init = false;
@@ -70,14 +72,17 @@ int rpcRegister(char* name, int* argTypes, skeleton f)
 	message_write_argtypes(&msg, argTypes);
 	message_finish(&msg);
 
-	if (message_send(rpc_server.socket, &msg))
+	if (message_send(rpc_client.socket, &msg))
 	{
 		message_destroy(&msg);
-		if (message_receive(rpc_server.socket, &msg))
+		if (message_receive(rpc_client.socket, &msg))
 		{
 			int type = message_get_type(&msg);
 			if (type == REGISTER_SUCCESS)
+			{
+				m_db.get_node(name, argTypes, true)->add_value(f);
 				status = 0;
+			}
 			else if (type == REGISTER_FAILURE)
 			{
 				int error = message_read_int(&msg);
@@ -88,7 +93,7 @@ int rpcRegister(char* name, int* argTypes, skeleton f)
 
 	message_destroy(&msg);
 
-	return -1;
+	return status;
 }
 
 int rpcExecute()

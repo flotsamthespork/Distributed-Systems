@@ -10,4 +10,5 @@
 #define EXECUTE_FAILURE 8
 #define TERMINATE 9
 
-// Error codes
+// Error codes (+ are warnings, - are errors)
+#define NONE 0

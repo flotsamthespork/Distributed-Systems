@@ -10,7 +10,7 @@
 #define HEADER_LENGTH (2*sizeof(int))
 
 static void
-increase_size(struct message *msg, size_t len = -1)
+increase_size(struct message *msg, int len = -1)
 {
 	if (len == -1)
 	{
@@ -43,7 +43,7 @@ void message_destroy(struct message *msg)
 }
 
 void message_write(struct message *msg,
-		char *buffer, size_t len)
+		char *buffer, int len)
 {
 	if (msg->alloc_length < msg->length+len)
 	{
@@ -134,10 +134,10 @@ get_argsize(int type)
 
 void message_write_args(struct message *msg, int* argtypes, void** args)
 {
-	size_t len = 0;
+	int len = 0;
 	while (argtypes[len++]);
 	int offset = 0;
-	for (size_t i = 0; i < len; i++)
+	for (int i = 0; i < len; i++)
 	{
 		int type = (argtypes[i] >> 16) & 0xFF;
 		int arrlen = argtypes[i] & 0xFFFF;
@@ -150,7 +150,7 @@ void message_write_args(struct message *msg, int* argtypes, void** args)
 		offset += argsize*arrlen;
 	}
 
-	for (size_t i = 0; i < len; i++)
+	for (int i = 0; i < len; i++)
 	{
 		int type = (argtypes[i] >> 16) & 0xFF;
 		int arrlen = argtypes[i] & 0xFFFF;
@@ -168,26 +168,26 @@ void message_write_args(struct message *msg, int* argtypes, void** args)
 		else
 		{
 			switch (type)
-				{
-				case ARG_CHAR:
-					message_write(msg, (char*)((char*)args[i]), argsize);
-					break;
-				case ARG_SHORT:
-					message_write(msg, (char*)((short*)args[i]), argsize);
-					break;
-				case ARG_INT:
-					message_write(msg, (char*)((int*)args[i]), argsize);
-					break;
-				case ARG_LONG:
-					message_write(msg, (char*)((long*)args[i]), argsize);
-					break;
-				case ARG_DOUBLE:
-					message_write(msg, (char*)((double*)args[i]), argsize);
-					break;
-				case ARG_FLOAT:
-					message_write(msg, (char*)((float*)args[i]), argsize);
-					break;
-				}
+			{
+			case ARG_CHAR:
+				message_write(msg, (char*)((char*)args[i]), argsize);
+				break;
+			case ARG_SHORT:
+				message_write(msg, (char*)((short*)args[i]), argsize);
+				break;
+			case ARG_INT:
+				message_write(msg, (char*)((int*)args[i]), argsize);
+				break;
+			case ARG_LONG:
+				message_write(msg, (char*)((long*)args[i]), argsize);
+				break;
+			case ARG_DOUBLE:
+				message_write(msg, (char*)((double*)args[i]), argsize);
+				break;
+			case ARG_FLOAT:
+				message_write(msg, (char*)((float*)args[i]), argsize);
+				break;
+			}
 		}
 
 	}
@@ -196,15 +196,15 @@ void message_write_args(struct message *msg, int* argtypes, void** args)
 void** message_read_args(struct message *msg, int* argtypes)
 {
 	void** args = (void**) msg->msg_ptr;
-	size_t len = 0;
+	int len = 0;
 	while (argtypes[len++]);
 	int offset = 0;
-	for (size_t i = 0; i < len; i++)
+	for (int i = 0; i < len; i++)
 	{
 		int type = (argtypes[i] >> 16) & 0xFF;
 		int arrlen = argtypes[i] & 0xFFFF;
 		if (arrlen <= 0)
-				arrlen = 1;
+			arrlen = 1;
 
 		args[i] = msg->msg_ptr+*((int*)args[i]);
 		msg->msg_ptr += sizeof(void*);
@@ -218,7 +218,12 @@ void** message_read_args(struct message *msg, int* argtypes)
 }
 
 bool message_receive(int socket, struct message *msg) {
-	int n = recv(socket, &msg->length, sizeof(size_t), 0);
+	char buffer[512];
+
+	message_start(msg);
+	msg->length = 0;
+
+	int n = recv(socket, buffer, sizeof(int), 0);
 	if (n == -1) {
 		fprintf(stderr, "Failed to receive message length\n");
 		return false;
@@ -226,14 +231,13 @@ bool message_receive(int socket, struct message *msg) {
 		return false;
 	}
 
-	msg->message = NULL;
-	increase_size(msg, msg->length*sizeof(char));
-	((int*)msg->message)[0] = msg->length - HEADER_LENGTH;
+	message_write(msg, buffer, sizeof(int));
+	int len = ((int*)msg->message)[0] + sizeof(int);
 
-	size_t bytesLeft = msg->length-1;
-	while (bytesLeft > 0)
+	while (len > 0)
 	{
-		n = recv(socket, msg->message+msg->length-bytesLeft, bytesLeft, 0);
+		int b = (len < 512 ? len : 512);
+		n = recv(socket, buffer, b, 0);
 		if (n == -1)
 		{
 			fprintf(stderr, "Failed to receive message\n");
@@ -243,14 +247,15 @@ bool message_receive(int socket, struct message *msg) {
 		{
 			return false;
 		}
-		bytesLeft -= n;
+		message_write(msg, buffer, n);
+		len -= n;
 	}
 
 	return true;
 }
 
 bool message_send(int socket, struct message *msg) {
-	size_t bytesLeft = msg->length;
+	int bytesLeft = msg->length;
 	while (bytesLeft > 0)
 	{
 		int n = send(socket, msg->message+msg->length-bytesLeft, bytesLeft, 0);

@@ -2,8 +2,8 @@
 #define __MESSAGE_H__
 
 struct message {
-	size_t alloc_length;
-	size_t length;
+	int alloc_length;
+	int length;
 	char *message;
 	char *msg_ptr;
 };
@@ -13,7 +13,7 @@ void message_finish(struct message *msg);
 void message_destroy(struct message *msg);
 
 void message_write(struct message *msg,
-		char *buffer, size_t len);
+		char *buffer, int len);
 
 int message_get_type(struct message *msg);
 void message_set_type(struct message *msg, int type);
