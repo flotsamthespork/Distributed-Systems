@@ -1,5 +1,9 @@
 
+#include <cstdlib>
+#include <cstring>
+
 #include "message.h"
+#include "rpc.h"
 
 #define HEADER_LENGTH (2*sizeof(int))
 
@@ -15,6 +19,7 @@ increase_size(struct message *msg, int len = -1)
 		msg->message = (char*) realloc(msg->message, len);
 	else
 		msg->message = (char*) malloc(len);
+	msg->msg_ptr = msg->message+HEADER_LENGTH;
 	msg->alloc_length = len;
 }
 
@@ -51,4 +56,157 @@ void message_write(struct message *msg,
 void message_set_type(struct message *msg, int type)
 {
 	((int*)msg->message)[1] = type;
+}
+
+void message_write_int(struct message *msg, int value)
+{
+	message_write(msg, (char*)&value, sizeof(int));
+}
+
+int message_read_int(struct message *msg)
+{
+	int value = (int) ((int*)msg->msg_ptr)[0];
+	msg->msg_ptr += sizeof(int);
+	return value;
+}
+
+void message_write_string(struct message *msg, char* value)
+{
+	message_write(msg, value, strlen(value)+1);
+}
+
+char* message_read_string(struct message *msg)
+{
+	char* value = msg->msg_ptr;
+	msg->msg_ptr += strlen(value)+1;
+	return value;
+}
+
+void message_write_argtypes(struct message *msg, int* argtypes)
+{
+	int len = 0;
+	while (argtypes[len++]);
+	message_write(msg, (char*)argtypes, len*sizeof(int));
+}
+
+int* message_read_argtypes(struct message *msg)
+{
+	int* argtypes = (int*) msg->msg_ptr;
+	int len = 0;
+	while (argtypes[len++]);
+	msg->msg_ptr += len*sizeof(int);
+	return argtypes;
+}
+
+static int
+get_argsize(int type)
+{
+	int argsize = 0;
+	switch (type)
+	{
+	case ARG_CHAR:
+		argsize = sizeof(char);
+		break;
+	case ARG_SHORT:
+		argsize = sizeof(short);
+		break;
+	case ARG_INT:
+		argsize = sizeof(int);
+		break;
+	case ARG_LONG:
+		argsize = sizeof(long);
+		break;
+	case ARG_DOUBLE:
+		argsize = sizeof(double);
+		break;
+	case ARG_FLOAT:
+		argsize = sizeof(float);
+		break;
+	}
+	return argsize;
+}
+
+void message_write_args(struct message *msg, int* argtypes, void** args)
+{
+	int len = 0;
+	while (argtypes[len++]);
+	int offset = 0;
+	for (int i = 0; i < len; i++)
+	{
+		int type = (argtypes[i] >> 16) & 0xFF;
+		int arrlen = argtypes[i] & 0xFFFF;
+		if (arrlen <= 0)
+			arrlen = 1;
+
+		int argsize = get_argsize(type);
+
+		message_write_int(msg, (len-i-1)*sizeof(void*)+offset);
+		offset += argsize*arrlen;
+	}
+
+	for (int i = 0; i < len; i++)
+	{
+		int type = (argtypes[i] >> 16) & 0xFF;
+		int arrlen = argtypes[i] & 0xFFFF;
+		bool is_array = true;
+		if (arrlen <= 0)
+		{
+			arrlen = 1;
+			is_array = false;
+		}
+
+		int argsize = get_argsize(type);
+
+		if (is_array)
+			message_write(msg, (char*)args[i], arrlen*argsize);
+		else
+		{
+			switch (type)
+				{
+				case ARG_CHAR:
+					message_write(msg, (char*)((char*)args[i]), argsize);
+					break;
+				case ARG_SHORT:
+					message_write(msg, (char*)((short*)args[i]), argsize);
+					break;
+				case ARG_INT:
+					message_write(msg, (char*)((int*)args[i]), argsize);
+					break;
+				case ARG_LONG:
+					message_write(msg, (char*)((long*)args[i]), argsize);
+					break;
+				case ARG_DOUBLE:
+					message_write(msg, (char*)((double*)args[i]), argsize);
+					break;
+				case ARG_FLOAT:
+					message_write(msg, (char*)((float*)args[i]), argsize);
+					break;
+				}
+		}
+
+	}
+}
+
+void** message_read_args(struct message *msg, int* argtypes)
+{
+	void** args = (void**) msg->msg_ptr;
+	int len = 0;
+	while (argtypes[len++]);
+	int offset = 0;
+	for (int i = 0; i < len; i++)
+	{
+		int type = (argtypes[i] >> 16) & 0xFF;
+		int arrlen = argtypes[i] & 0xFFFF;
+		if (arrlen <= 0)
+				arrlen = 1;
+
+		args[i] = msg->msg_ptr+*((int*)args[i]);
+		msg->msg_ptr += sizeof(void*);
+
+		int argsize = get_argsize(type);
+		offset += argsize*arrlen;
+	}
+	msg->msg_ptr += offset;
+
+	return args;
 }
