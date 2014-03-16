@@ -1,7 +1,7 @@
 SOURCES = $(wildcard *.c)
 OBJECTS = $(SOURCES:.c=.o)
-CXXFLAGS = -I../common -L../common -g
-CXXLIBS = -lcommon -lpthread
+CXXFLAGS = -I../common -L../common -g -Wno-write-strings
+CXXLIBS = -lrpc -lpthread
 CXX = g++
 
 all: $(MAIN)

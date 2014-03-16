@@ -85,7 +85,6 @@ bind_server_socket(struct socket *s)
 	socket_destroy(s);
 	socket_init(s);
 
-
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
@@ -157,7 +156,6 @@ bool connect_socket(struct socket *s)
 	hints.ai_flags = AI_PASSIVE;
 
 	if (getaddrinfo(s->hostname, s->port, &hints, &sa) != 0) {
-//		std::cerr << "Could not get host information" << std::endl;
 		fprintf(stderr, "Could not get host information\n");
 	    return false;
 	}
@@ -168,12 +166,10 @@ bool connect_socket(struct socket *s)
 	for (p = sa; p != NULL; p = p->ai_next) {
 		sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
 		if (sock == -1) {
-//			std::cerr << "Could not create socket" << std::endl;
 			fprintf(stderr, "Could not create socket\n");
 		} else {
 			if (connect(sock, p->ai_addr, p->ai_addrlen) == -1) {
 				close(sock);
-//				std::cerr << "Failed to connect to socket" << std::endl;
 				fprintf(stderr, "Failed to connect to socket\n");
 			} else {
 				break;

@@ -1,3 +1,4 @@
+// Message Types
 #define REGISTER 0
 #define REGISTER_SUCCESS 1
 #define REGISTER_FAILURE 2
@@ -8,3 +9,5 @@
 #define EXECUTE_SUCCESS 7
 #define EXECUTE_FAILURE 8
 #define TERMINATE 9
+
+// Error codes

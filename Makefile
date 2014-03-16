@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 
 all:
+	make clean
 	(cd common && make)
 	(cd binder_src && make && cp binder ../)
 	(cd server_src && make && cp server ../)
@@ -11,4 +12,4 @@ clean:
 	(cd server_src && make clean)
 	(cd client_src && make clean)
 	(cd binder_src && make clean)
-	rm client server binder
+	rm -f client server binder

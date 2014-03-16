@@ -1,6 +1,8 @@
 
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
+#include <sys/socket.h>
 
 #include "message.h"
 #include "rpc.h"
@@ -8,7 +10,7 @@
 #define HEADER_LENGTH (2*sizeof(int))
 
 static void
-increase_size(struct message *msg, int len = -1)
+increase_size(struct message *msg, size_t len = -1)
 {
 	if (len == -1)
 	{
@@ -23,16 +25,11 @@ increase_size(struct message *msg, int len = -1)
 	msg->alloc_length = len;
 }
 
-void message_init(struct message *msg)
+void message_start(struct message *msg)
 {
 	msg->length = HEADER_LENGTH;
-	msg->message = 0;
+	msg->message = NULL;
 	increase_size(msg, 512*sizeof(int));
-}
-
-void message_destroy(struct message *msg)
-{
-	free(msg->message);
 }
 
 void message_finish(struct message *msg)
@@ -40,10 +37,15 @@ void message_finish(struct message *msg)
 	((int*)msg->message)[0] = msg->length - HEADER_LENGTH;
 }
 
-void message_write(struct message *msg,
-		char *buffer, int len)
+void message_destroy(struct message *msg)
 {
-	if (msg->alloc_length < (msg->length+len))
+	free(msg->message);
+}
+
+void message_write(struct message *msg,
+		char *buffer, size_t len)
+{
+	if (msg->alloc_length < msg->length+len)
 	{
 		increase_size(msg, msg->alloc_length+len);
 	}
@@ -52,6 +54,10 @@ void message_write(struct message *msg,
 	msg->length += len;
 }
 
+int message_get_type(struct message *msg)
+{
+	return ((int*)msg->message)[1];
+}
 
 void message_set_type(struct message *msg, int type)
 {
@@ -128,10 +134,10 @@ get_argsize(int type)
 
 void message_write_args(struct message *msg, int* argtypes, void** args)
 {
-	int len = 0;
+	size_t len = 0;
 	while (argtypes[len++]);
 	int offset = 0;
-	for (int i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++)
 	{
 		int type = (argtypes[i] >> 16) & 0xFF;
 		int arrlen = argtypes[i] & 0xFFFF;
@@ -144,7 +150,7 @@ void message_write_args(struct message *msg, int* argtypes, void** args)
 		offset += argsize*arrlen;
 	}
 
-	for (int i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++)
 	{
 		int type = (argtypes[i] >> 16) & 0xFF;
 		int arrlen = argtypes[i] & 0xFFFF;
@@ -190,10 +196,10 @@ void message_write_args(struct message *msg, int* argtypes, void** args)
 void** message_read_args(struct message *msg, int* argtypes)
 {
 	void** args = (void**) msg->msg_ptr;
-	int len = 0;
+	size_t len = 0;
 	while (argtypes[len++]);
 	int offset = 0;
-	for (int i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++)
 	{
 		int type = (argtypes[i] >> 16) & 0xFF;
 		int arrlen = argtypes[i] & 0xFFFF;
@@ -209,4 +215,52 @@ void** message_read_args(struct message *msg, int* argtypes)
 	msg->msg_ptr += offset;
 
 	return args;
+}
+
+bool message_receive(int socket, struct message *msg) {
+	int n = recv(socket, &msg->length, sizeof(size_t), 0);
+	if (n == -1) {
+		fprintf(stderr, "Failed to receive message length\n");
+		return false;
+	} else if (n == 0) {
+		return false;
+	}
+
+	msg->message = NULL;
+	increase_size(msg, msg->length*sizeof(char));
+	((int*)msg->message)[0] = msg->length - HEADER_LENGTH;
+
+	size_t bytesLeft = msg->length-1;
+	while (bytesLeft > 0)
+	{
+		n = recv(socket, msg->message+msg->length-bytesLeft, bytesLeft, 0);
+		if (n == -1)
+		{
+			fprintf(stderr, "Failed to receive message\n");
+			return false;
+		}
+		else if (n == 0)
+		{
+			return false;
+		}
+		bytesLeft -= n;
+	}
+
+	return true;
+}
+
+bool message_send(int socket, struct message *msg) {
+	size_t bytesLeft = msg->length;
+	while (bytesLeft > 0)
+	{
+		int n = send(socket, msg->message+msg->length-bytesLeft, bytesLeft, 0);
+		if (n == -1)
+		{
+			fprintf(stderr, "Failed to send message\n");
+			return false;
+		}
+		bytesLeft -= n;
+	}
+
+	return true;
 }
