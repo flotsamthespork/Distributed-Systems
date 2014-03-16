@@ -187,3 +187,61 @@ bool connect_socket(struct socket *s)
 	s->socket = sock;
 	return true;
 }
+
+int
+listen_socket(struct socket *s, int(*handler)(int))
+{
+	fd_set master;
+	fd_set read_fds;
+
+	FD_ZERO(&master);
+	FD_ZERO(&read_fds);
+
+	FD_SET(s->socket, &master);
+	int fdmax = s->socket;
+
+	if (listen(s->socket, 6) == -1) {
+		fprintf(stderr, "Failed to listen to socket\n");
+		return -1;
+	}
+
+	while (true) {
+		read_fds = master;
+		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
+			fprintf(stderr, "Failed to select\n");
+			return -1;
+		}
+
+		for (int i = 0; i <= fdmax; ++i) {
+			if (FD_ISSET(i, &read_fds)) {
+				if (i == s->socket) {
+					// new connection
+					int newfd = accept(s->socket, NULL, NULL);
+					if (newfd == -1) {
+						fprintf(stderr, "Failed to accept connection\n");
+					} else {
+						FD_SET(newfd, &master);
+						if (newfd > fdmax) fdmax = newfd;
+						fprintf(stdout, "Connection accepted!\n"); //TODO: DELETE THIS
+					}
+				} else {
+					(*handler)(i);
+
+					/*// receive data from client
+					std::string text;
+					bool success = receiveText(i, text);
+					if (success) {
+						std::cout << text << std::endl;
+						toTitleCase(text);
+						success = sendText(i, text);
+					}
+
+					if (!success) {
+						close(i);
+						FD_CLR(i, &master);
+					}*/
+				}
+			}
+		}
+	}
+}

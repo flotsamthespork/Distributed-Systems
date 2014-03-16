@@ -4,6 +4,10 @@
 
 #include "binder.h"
 
+static int handler(int socket)
+{
+	fprintf(stdout, "HANDLED SON");
+}
 
 int main()
 {
@@ -15,9 +19,10 @@ int main()
 		return 0;
 	}
 
-	printf("BINDER ADDRESS %s\n", s.hostname);
-	printf("BINDER PORT %s\n", s.port);
+	printf("BINDER_ADDRESS %s\n", s.hostname);
+	printf("BINDER_PORT %s\n", s.port);
 
+	listen_socket(&s, handler);
 
 	socket_destroy(&s);
 

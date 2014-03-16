@@ -16,5 +16,6 @@ bool socket_isvalid(struct socket *s);
 bool bind_server_socket(struct socket *s);
 
 bool connect_socket(struct socket *s);
+int listen_socket(struct socket *s, int(*handler)(int));
 
 #endif
