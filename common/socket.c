@@ -184,8 +184,8 @@ bool connect_socket(struct socket *s)
 	return true;
 }
 
-int
-listen_socket(struct socket *s, bool(*handler)(int))
+bool
+listen_socket(struct socket *s, bool(*handler)(int), bool *listen_break)
 {
 	fd_set master;
 	fd_set read_fds;
@@ -198,14 +198,14 @@ listen_socket(struct socket *s, bool(*handler)(int))
 
 	if (listen(s->socket, 6) == -1) {
 		fprintf(stderr, "Failed to listen to socket\n");
-		return -1;
+		return false;
 	}
 
-	while (true) {
+	while (!*listen_break) {
 		read_fds = master;
 		if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
 			fprintf(stderr, "Failed to select\n");
-			return -1;
+			return false;
 		}
 
 		for (int i = 0; i <= fdmax; ++i) {
@@ -218,7 +218,6 @@ listen_socket(struct socket *s, bool(*handler)(int))
 					} else {
 						FD_SET(newfd, &master);
 						if (newfd > fdmax) fdmax = newfd;
-						fprintf(stdout, "Connection accepted!\n"); //TODO: DELETE THIS
 					}
 				} else {
 					bool success = (*handler)(i);
@@ -231,4 +230,6 @@ listen_socket(struct socket *s, bool(*handler)(int))
 			}
 		}
 	}
+
+	return true;
 }

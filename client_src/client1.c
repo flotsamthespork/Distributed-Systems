@@ -11,6 +11,8 @@
 
 #include "rpc.h"
 
+#include "constants.h"
+
 #define CHAR_ARRAY_LENGTH 100
 
 int main() {

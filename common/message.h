@@ -13,7 +13,7 @@ void message_finish(struct message *msg);
 void message_destroy(struct message *msg);
 
 void message_write(struct message *msg,
-		char *buffer, int len);
+		const char *buffer, int len);
 
 int message_get_type(struct message *msg);
 void message_set_type(struct message *msg, int type);
@@ -21,7 +21,7 @@ void message_set_type(struct message *msg, int type);
 void message_write_int(struct message *msg, int value);
 int message_read_int(struct message *msg);
 
-void message_write_string(struct message *msg, char* value);
+void message_write_string(struct message *msg, const char* value);
 char* message_read_string(struct message *msg);
 
 void message_write_argtypes(struct message *msg, int* argtypes);

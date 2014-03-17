@@ -3,9 +3,12 @@
 #include <cstdio>
 #include <cstring>
 #include <sys/socket.h>
+#include "util.h"
+#include "rpc.h"
+#include "constants.h"
 
 #include "message.h"
-#include "rpc.h"
+
 
 #define HEADER_LENGTH (2*sizeof(int))
 
@@ -43,7 +46,7 @@ void message_destroy(struct message *msg)
 }
 
 void message_write(struct message *msg,
-		char *buffer, int len)
+		const char *buffer, int len)
 {
 	if (msg->alloc_length < msg->length+len)
 	{
@@ -76,7 +79,7 @@ int message_read_int(struct message *msg)
 	return value;
 }
 
-void message_write_string(struct message *msg, char* value)
+void message_write_string(struct message *msg, const char* value)
 {
 	message_write(msg, value, strlen(value)+1);
 }
@@ -104,34 +107,6 @@ int* message_read_argtypes(struct message *msg)
 	return argtypes;
 }
 
-static int
-get_argsize(int type)
-{
-	int argsize = 0;
-	switch (type)
-	{
-	case ARG_CHAR:
-		argsize = sizeof(char);
-		break;
-	case ARG_SHORT:
-		argsize = sizeof(short);
-		break;
-	case ARG_INT:
-		argsize = sizeof(int);
-		break;
-	case ARG_LONG:
-		argsize = sizeof(long);
-		break;
-	case ARG_DOUBLE:
-		argsize = sizeof(double);
-		break;
-	case ARG_FLOAT:
-		argsize = sizeof(float);
-		break;
-	}
-	return argsize;
-}
-
 void message_write_args(struct message *msg, int* argtypes, void** args)
 {
 	int len = 0;
@@ -146,7 +121,11 @@ void message_write_args(struct message *msg, int* argtypes, void** args)
 
 		int argsize = get_argsize(type);
 
-		message_write_int(msg, (len-i-1)*sizeof(void*)+offset);
+		int svs = sizeof(void*);
+
+		message_write_int(msg, (len-i)*sizeof(void*)+offset);
+		if (svs == 8)
+				message_write_int(msg, 0);
 		offset += argsize*arrlen;
 	}
 
@@ -206,7 +185,7 @@ void** message_read_args(struct message *msg, int* argtypes)
 		if (arrlen <= 0)
 			arrlen = 1;
 
-		args[i] = msg->msg_ptr+*((int*)args[i]);
+		args[i] = msg->msg_ptr+((long long)args[i]);
 		msg->msg_ptr += sizeof(void*);
 
 		int argsize = get_argsize(type);
