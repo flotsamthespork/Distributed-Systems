@@ -13,7 +13,7 @@ void socket_init(struct socket *s,
 void socket_destroy(struct socket *s);
 bool socket_isvalid(struct socket *s);
 
-bool bind_server_socket(struct socket *s, char* port = "0");
+bool bind_server_socket(struct socket *s);
 
 bool connect_socket(struct socket *s);
 bool listen_socket(struct socket *s, bool(*handler)(int), bool *listen_break);

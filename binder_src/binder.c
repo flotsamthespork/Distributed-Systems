@@ -129,7 +129,7 @@ int main()
 	struct socket s;
 
 	socket_init(&s);
-	if (!bind_server_socket(&s, "40000")) // TODO: Change port back to 0
+	if (!bind_server_socket(&s))
 		return 0;
 
 	printf("BINDER_ADDRESS %s\n", s.hostname);

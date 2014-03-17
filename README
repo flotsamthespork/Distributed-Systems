@@ -1,0 +1,23 @@
+To compile client:
+g++ -L. client.o -lrpc -lpthread -o client
+
+To compile server:
+g++ -L. server_functions.o server_function_skels.o server.o -lrpc -lpthread -o server
+
+
+
+
+No dependencies other than lpthread
+
+
+
+
+Group members:
+
+Alexander Walter
+am2walte
+20375588
+
+Patrick Dobson
+pjdobson
+20384008

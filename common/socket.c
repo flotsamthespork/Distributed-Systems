@@ -74,7 +74,7 @@ fill_server_info(struct socket *s)
 }
 
 bool
-bind_server_socket(struct socket *s, char* port)
+bind_server_socket(struct socket *s)
 {
 	int conn_socket;
 	int status;
@@ -90,7 +90,7 @@ bind_server_socket(struct socket *s, char* port)
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_PASSIVE;
 
-	status = getaddrinfo(0, port, &hints, &info);
+	status = getaddrinfo(0, "0", &hints, &info);
 	if (status != 0)
 	{
 		printf("Error(getaddrinfo):\n");
